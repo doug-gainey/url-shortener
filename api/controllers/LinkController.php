@@ -147,6 +147,14 @@ class LinkController
             $updateData['expires_at'] = trim($body['expires_at']) ?: null;
         }
 
+        if (array_key_exists('is_active', $body)) {
+            $updateData['is_active'] = filter_var($body['is_active'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if ($updateData['is_active'] === null) {
+                self::respond(422, ['error' => 'is_active must be a boolean']);
+                return;
+            }
+        }
+
         $link = Link::updateByCode($code, $updateData);
         if (!$link) {
             self::respond(404, ['error' => 'Link not found']);
@@ -170,6 +178,7 @@ class LinkController
             'custom_alias' => $link['custom_alias'],
             'clicks' => $link['clicks'],
             'last_clicked_at' => $link['last_clicked_at'],
+            'is_active' => $link['is_active'],
             'created_at' => $link['created_at'],
             'expires_at' => $link['expires_at'],
         ];
@@ -184,8 +193,8 @@ class LinkController
             return;
         }
 
-        // Remove cached URL
         RedisService::delete('url:' . $code);
+        Logger::info('Link deactivated', ['code' => $code]);
 
         self::respond(204, null);
     }

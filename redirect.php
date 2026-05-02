@@ -15,6 +15,12 @@ if (!$link) {
     exit;
 }
 
+if (isset($link['is_active']) && $link['is_active'] == 0) {
+    http_response_code(410);
+    echo 'Link deactivated.';
+    exit;
+}
+
 if ($link['expires_at'] !== null && strtotime($link['expires_at']) < time()) {
     http_response_code(410);
     echo 'Link expired.';

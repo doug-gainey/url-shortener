@@ -27,6 +27,7 @@
             Destination
           </th>
           <th class="px-4 py-3 text-sm font-semibold text-slate-500">Clicks</th>
+          <th class="px-4 py-3 text-sm font-semibold text-slate-500">Status</th>
           <th class="px-4 py-3 text-sm font-semibold text-slate-500">
             Created
           </th>
@@ -56,6 +57,18 @@
           </td>
           <td class="px-4 py-4 text-sm text-slate-600">{{ link.clicks }}</td>
           <td class="px-4 py-4 text-sm text-slate-600">
+            <span
+              :class="[
+                'inline-flex rounded-full px-3 py-1 text-xs font-semibold',
+                link.is_active
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : 'bg-rose-100 text-rose-700',
+              ]"
+            >
+              {{ link.is_active ? "Active" : "Inactive" }}
+            </span>
+          </td>
+          <td class="px-4 py-4 text-sm text-slate-600">
             {{ formatDate(link.created_at) }}
           </td>
           <td class="px-4 py-4 text-sm text-slate-600">
@@ -73,10 +86,15 @@
                 QR
               </button>
               <button
-                @click="$emit('delete', link.short_code)"
-                class="rounded-full bg-rose-600 px-4 py-2 text-white transition hover:bg-rose-700"
+                @click="toggleActive(link)"
+                :class="[
+                  'rounded-full px-3 py-2 text-white transition',
+                  link.is_active
+                    ? 'bg-rose-600 hover:bg-rose-700'
+                    : 'bg-emerald-600 hover:bg-emerald-700',
+                ]"
               >
-                Delete
+                {{ link.is_active ? "Deactivate" : "Restore" }}
               </button>
             </div>
           </td>
@@ -109,6 +127,7 @@ interface LinkItem {
   original_url: string;
   clicks: number;
   created_at: string;
+  is_active: boolean;
 }
 
 interface StatsData {
@@ -153,13 +172,25 @@ const openQR = (link: LinkItem) => {
 const openStats = async (link: LinkItem) => {
   try {
     const response = await api.get(`/links/${link.short_code}/stats`);
-    console.log(response);
     if (response && response.data.data) {
       selectedStats.value = response.data.data;
       showStatsModal.value = true;
     }
   } catch (error) {
     console.error("Failed to fetch stats:", error);
+  }
+};
+
+const toggleActive = async (link: LinkItem) => {
+  try {
+    const response = await api.put(`/links/${link.short_code}`, {
+      is_active: !link.is_active,
+    });
+    if (response && response.data.data) {
+      link.is_active = Boolean(response.data.data.is_active);
+    }
+  } catch (error) {
+    console.error("Failed to toggle active state:", error);
   }
 };
 

@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS links (
     expires_at DATETIME NULL,
     clicks INTEGER NOT NULL DEFAULT 0,
     last_clicked_at DATETIME NULL,
+    is_active INTEGER NOT NULL DEFAULT 1,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -31,8 +32,28 @@ CREATE INDEX IF NOT EXISTS idx_short_code ON links(short_code);
 CREATE INDEX IF NOT EXISTS idx_expires_at ON links(expires_at);
 CREATE INDEX IF NOT EXISTS idx_created_at ON links(created_at);
 CREATE INDEX IF NOT EXISTS idx_last_clicked_at ON links(last_clicked_at);
+CREATE INDEX IF NOT EXISTS idx_is_active ON links(is_active);
 SQL;
         self::db()->exec($sql);
+
+        if (!self::hasColumn('links', 'is_active')) {
+            self::db()->exec('ALTER TABLE links ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1');
+        }
+    }
+
+    private static function hasColumn(string $table, string $column): bool
+    {
+        $stmt = self::db()->prepare('PRAGMA table_info(' . $table . ')');
+        $stmt->execute();
+        $columns = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($columns as $col) {
+            if ($col['name'] === $column) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static function findByCode(string $code): ?array
@@ -64,8 +85,15 @@ SQL;
 
     public static function deleteByCode(string $code): bool
     {
-        $stmt = self::db()->prepare('DELETE FROM links WHERE short_code = :code');
+        $stmt = self::db()->prepare('UPDATE links SET is_active = 0 WHERE short_code = :code');
         return $stmt->execute([':code' => $code]);
+    }
+
+    public static function restoreByCode(string $code): ?array
+    {
+        $stmt = self::db()->prepare('UPDATE links SET is_active = 1 WHERE short_code = :code');
+        $stmt->execute([':code' => $code]);
+        return self::findByCode($code);
     }
 
     public static function updateByCode(string $code, array $data): ?array
@@ -88,6 +116,11 @@ SQL;
         if (array_key_exists('expires_at', $data)) {
             $fields[] = 'expires_at = :expires_at';
             $params[':expires_at'] = $data['expires_at'] ?: null;
+        }
+
+        if (array_key_exists('is_active', $data)) {
+            $fields[] = 'is_active = :is_active';
+            $params[':is_active'] = $data['is_active'] ? 1 : 0;
         }
 
         if (empty($fields)) {
