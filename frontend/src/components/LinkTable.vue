@@ -96,6 +96,13 @@
               >
                 {{ link.is_active ? "Deactivate" : "Restore" }}
               </button>
+              <button
+                v-if="!link.is_active"
+                @click="permanentlyDelete(link)"
+                class="rounded-full bg-red-700 px-3 py-2 text-white transition hover:bg-red-800"
+              >
+                Delete
+              </button>
             </div>
           </td>
         </tr>
@@ -191,6 +198,21 @@ const toggleActive = async (link: LinkItem) => {
     }
   } catch (error) {
     console.error("Failed to toggle active state:", error);
+  }
+};
+
+const permanentlyDelete = async (link: LinkItem) => {
+  if (
+    !confirm(`Permanently delete '${link.short_code}'? This cannot be undone.`)
+  ) {
+    return;
+  }
+
+  try {
+    await api.delete(`/links/${link.short_code}?permanent=1`);
+    emit("delete", link.short_code);
+  } catch (error) {
+    console.error("Failed to permanently delete link:", error);
   }
 };
 

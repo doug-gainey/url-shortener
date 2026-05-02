@@ -96,6 +96,17 @@ SQL;
         return self::findByCode($code);
     }
 
+    public static function permanentlyDeleteByCode(string $code): bool
+    {
+        $link = self::findByCode($code);
+        if (!$link || $link['is_active'] == 1) {
+            return false;
+        }
+
+        $stmt = self::db()->prepare('DELETE FROM links WHERE short_code = :code');
+        return $stmt->execute([':code' => $code]);
+    }
+
     public static function updateByCode(string $code, array $data): ?array
     {
         $fields = [];

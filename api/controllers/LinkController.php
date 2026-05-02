@@ -188,13 +188,23 @@ class LinkController
 
     private static function delete(string $code): void
     {
-        if (!Link::deleteByCode($code)) {
-            self::respond(404, ['error' => 'Link not found']);
-            return;
-        }
+        $permanent = isset($_GET['permanent']) && filter_var($_GET['permanent'], FILTER_VALIDATE_BOOLEAN);
 
-        RedisService::delete('url:' . $code);
-        Logger::info('Link deactivated', ['code' => $code]);
+        if ($permanent) {
+            if (!Link::permanentlyDeleteByCode($code)) {
+                self::respond(422, ['error' => 'Link must be deactivated before permanent deletion']);
+                return;
+            }
+            RedisService::delete('url:' . $code);
+            Logger::info('Link permanently deleted', ['code' => $code]);
+        } else {
+            if (!Link::deleteByCode($code)) {
+                self::respond(404, ['error' => 'Link not found']);
+                return;
+            }
+            RedisService::delete('url:' . $code);
+            Logger::info('Link deactivated', ['code' => $code]);
+        }
 
         self::respond(204, null);
     }

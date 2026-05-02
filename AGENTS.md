@@ -132,6 +132,17 @@ Example failure response:
 - Current code increments click counts directly in SQLite via `Link::incrementClicks()`.
 - Redis is only used for URL caching in `redirect.php`.
 
+### Link Lifecycle & Deletion
+
+- **Soft Delete (Deactivate)**: `DELETE /api/links/{code}` sets `is_active = 0` without removing the link from the database
+  - Deactivated links return `410 Link deactivated.` when accessed
+  - Deactivated links can be restored with `PUT /api/links/{code}` with `is_active: true`
+  - Original URL is cleared from Redis cache on deactivation
+- **Permanent Delete**: `DELETE /api/links/{code}?permanent=1` only works if `is_active = 0`
+  - Returns `422` error if attempting to permanently delete an active link
+  - Permanently deleted links are removed from the database completely
+  - Cannot be undone; frontend shows confirmation dialog
+
 ### URL Validation
 
 - Accept only `http://` and `https://` schemes — reject everything else including
