@@ -26,7 +26,6 @@
           <th class="px-4 py-3 text-sm font-semibold text-slate-500">
             Destination
           </th>
-          <th class="px-4 py-3 text-sm font-semibold text-slate-500">Clicks</th>
           <th class="px-4 py-3 text-sm font-semibold text-slate-500">Status</th>
           <th class="px-4 py-3 text-sm font-semibold text-slate-500">
             Created
@@ -48,14 +47,12 @@
               target="_blank"
               rel="noreferrer"
               class="text-sky-600 hover:underline"
-              @click="incrementClick(link)"
               >{{ link.short_code }}</a
             >
           </td>
           <td class="px-4 py-4 text-sm text-slate-600">
             {{ link.original_url }}
           </td>
-          <td class="px-4 py-4 text-sm text-slate-600">{{ link.clicks }}</td>
           <td class="px-4 py-4 text-sm text-slate-600">
             <span
               :class="[
@@ -132,7 +129,6 @@ import { api } from "../api/client";
 interface LinkItem {
   short_code: string;
   original_url: string;
-  clicks: number;
   created_at: string;
   is_active: boolean;
 }
@@ -161,10 +157,6 @@ const showQRModal = ref(false);
 const selectedQRUrl = ref("");
 const showStatsModal = ref(false);
 const selectedStats = ref<StatsData | null>(null);
-
-const incrementClick = (link: LinkItem) => {
-  link.clicks++;
-};
 
 const shortUrl = (code: string) => {
   const base = props.appBaseUrl?.trim() || window.location.origin;
