@@ -59,20 +59,37 @@
             {{ formatDate(link.created_at) }}
           </td>
           <td class="px-4 py-4 text-sm text-slate-600">
-            <button
-              @click="$emit('delete', link.short_code)"
-              class="rounded-full bg-rose-600 px-4 py-2 text-white transition hover:bg-rose-700"
-            >
-              Delete
-            </button>
+            <div class="flex gap-2">
+              <button
+                @click="openQR(link)"
+                class="rounded-full bg-blue-500 px-3 py-2 text-white transition hover:bg-blue-600"
+              >
+                QR
+              </button>
+              <button
+                @click="$emit('delete', link.short_code)"
+                class="rounded-full bg-rose-600 px-4 py-2 text-white transition hover:bg-rose-700"
+              >
+                Delete
+              </button>
+            </div>
           </td>
         </tr>
       </tbody>
     </table>
+
+    <QRCodeModal
+      :is-open="showQRModal"
+      :short-url="selectedQRUrl"
+      @close="showQRModal = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref } from "vue";
+import QRCodeModal from "./QRCodeModal.vue";
+
 interface LinkItem {
   short_code: string;
   original_url: string;
@@ -90,6 +107,9 @@ const emit = defineEmits<{
   (e: "delete", code: string): void;
 }>();
 
+const showQRModal = ref(false);
+const selectedQRUrl = ref("");
+
 const incrementClick = (link: LinkItem) => {
   link.clicks++;
 };
@@ -97,6 +117,11 @@ const incrementClick = (link: LinkItem) => {
 const shortUrl = (code: string) => {
   const base = props.appBaseUrl?.trim() || window.location.origin;
   return `${base.replace(/\/+$/, "")}/${code}`;
+};
+
+const openQR = (link: LinkItem) => {
+  selectedQRUrl.value = shortUrl(link.short_code);
+  showQRModal.value = true;
 };
 
 const formatDate = (value: string) =>
