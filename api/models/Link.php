@@ -23,12 +23,14 @@ CREATE TABLE IF NOT EXISTS links (
     custom_alias VARCHAR(64),
     expires_at DATETIME NULL,
     clicks INTEGER NOT NULL DEFAULT 0,
+    last_clicked_at DATETIME NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_short_code ON links(short_code);
 CREATE INDEX IF NOT EXISTS idx_expires_at ON links(expires_at);
 CREATE INDEX IF NOT EXISTS idx_created_at ON links(created_at);
+CREATE INDEX IF NOT EXISTS idx_last_clicked_at ON links(last_clicked_at);
 SQL;
         self::db()->exec($sql);
     }
@@ -102,7 +104,7 @@ SQL;
 
     public static function incrementClicks(string $code): void
     {
-        $stmt = self::db()->prepare('UPDATE links SET clicks = clicks + 1 WHERE short_code = :code');
+        $stmt = self::db()->prepare('UPDATE links SET clicks = clicks + 1, last_clicked_at = CURRENT_TIMESTAMP WHERE short_code = :code');
         $stmt->execute([':code' => $code]);
     }
 

@@ -61,6 +61,12 @@
           <td class="px-4 py-4 text-sm text-slate-600">
             <div class="flex gap-2">
               <button
+                @click="openStats(link)"
+                class="rounded-full bg-green-500 px-3 py-2 text-white transition hover:bg-green-600"
+              >
+                Stats
+              </button>
+              <button
                 @click="openQR(link)"
                 class="rounded-full bg-blue-500 px-3 py-2 text-white transition hover:bg-blue-600"
               >
@@ -83,18 +89,36 @@
       :short-url="selectedQRUrl"
       @close="showQRModal = false"
     />
+
+    <StatsModal
+      :is-open="showStatsModal"
+      :stats="selectedStats"
+      @close="showStatsModal = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from "vue";
 import QRCodeModal from "./QRCodeModal.vue";
+import StatsModal from "./StatsModal.vue";
+import { api } from "../api/client";
 
 interface LinkItem {
   short_code: string;
   original_url: string;
   clicks: number;
   created_at: string;
+}
+
+interface StatsData {
+  short_code: string;
+  original_url: string;
+  custom_alias: string | null;
+  clicks: number;
+  last_clicked_at: string | null;
+  created_at: string;
+  expires_at: string | null;
 }
 
 const props = defineProps<{
@@ -109,6 +133,8 @@ const emit = defineEmits<{
 
 const showQRModal = ref(false);
 const selectedQRUrl = ref("");
+const showStatsModal = ref(false);
+const selectedStats = ref<StatsData | null>(null);
 
 const incrementClick = (link: LinkItem) => {
   link.clicks++;
@@ -122,6 +148,19 @@ const shortUrl = (code: string) => {
 const openQR = (link: LinkItem) => {
   selectedQRUrl.value = shortUrl(link.short_code);
   showQRModal.value = true;
+};
+
+const openStats = async (link: LinkItem) => {
+  try {
+    const response = await api.get(`/links/${link.short_code}/stats`);
+    console.log(response);
+    if (response && response.data.data) {
+      selectedStats.value = response.data.data;
+      showStatsModal.value = true;
+    }
+  } catch (error) {
+    console.error("Failed to fetch stats:", error);
+  }
 };
 
 const formatDate = (value: string) =>

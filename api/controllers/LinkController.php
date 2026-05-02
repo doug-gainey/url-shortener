@@ -164,7 +164,17 @@ class LinkController
             return;
         }
 
-        self::respond(200, ['data' => ['clicks' => $link['clicks'], 'short_code' => $code]]);
+        $stats = [
+            'short_code' => $link['short_code'],
+            'original_url' => $link['original_url'],
+            'custom_alias' => $link['custom_alias'],
+            'clicks' => $link['clicks'],
+            'last_clicked_at' => $link['last_clicked_at'],
+            'created_at' => $link['created_at'],
+            'expires_at' => $link['expires_at'],
+        ];
+
+        self::respond(200, ['data' => $stats]);
     }
 
     private static function delete(string $code): void
