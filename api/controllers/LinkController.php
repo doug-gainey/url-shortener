@@ -66,39 +66,53 @@ class LinkController
 
     private static function create(): void
     {
+        $clientId = RateLimiter::getClientIdentifier();
+        if (RateLimiter::isRateLimited($clientId)) {
+            Logger::warning('Rate limit exceeded', ['client_id' => $clientId]);
+            self::respond(429, ['error' => 'Rate limit exceeded. Please try again later.']);
+            return;
+        }
+
         $body = json_decode(file_get_contents('php://input'), true) ?: [];
         $originalUrl = trim($body['original_url'] ?? '');
         $customAlias = trim($body['custom_alias'] ?? '');
         $expiresAt = trim($body['expires_at'] ?? '');
 
         if ($originalUrl === '') {
+            Logger::warning('Missing original_url in create request', ['client_id' => $clientId]);
             self::respond(422, ['error' => 'original_url is required']);
             return;
         }
 
-        if (!filter_var($originalUrl, FILTER_VALIDATE_URL) || !preg_match('#^https?://#i', $originalUrl)) {
+        if (!UrlValidator::validateUrl($originalUrl)) {
+            Logger::warning('Invalid original_url in create request', ['client_id' => $clientId, 'url' => $originalUrl]);
             self::respond(422, ['error' => 'original_url must be a valid http or https URL']);
             return;
         }
 
-        if ($customAlias !== '' && !preg_match('/^[a-zA-Z0-9_-]{4,64}$/', $customAlias)) {
-            self::respond(422, ['error' => 'custom_alias must be 4-64 alphanumeric characters, underscores or hyphens']);
+        $normalizedUrl = UrlValidator::normalizeUrl($originalUrl);
+
+        if ($customAlias !== '' && !UrlValidator::validateCustomAlias($customAlias)) {
+            Logger::warning('Invalid custom_alias in create request', ['client_id' => $clientId, 'alias' => $customAlias]);
+            self::respond(422, ['error' => 'custom_alias must be 4-64 alphanumeric characters, underscores or hyphens, and not a reserved code']);
             return;
         }
 
         $code = $customAlias !== '' ? $customAlias : ShortCodeGenerator::uniqueCode(6);
         if (Link::existsCode($code)) {
+            Logger::warning('Duplicate short code in create request', ['client_id' => $clientId, 'code' => $code]);
             self::respond(409, ['error' => 'short code already exists']);
             return;
         }
 
         $link = Link::create([
             'short_code' => $code,
-            'original_url' => $originalUrl,
+            'original_url' => $normalizedUrl,
             'custom_alias' => $customAlias ?: null,
             'expires_at' => $expiresAt ?: null,
         ]);
 
+        Logger::info('Link created successfully', ['client_id' => $clientId, 'code' => $code, 'url' => $normalizedUrl]);
         self::respond(201, ['data' => $link]);
     }
 
@@ -109,17 +123,17 @@ class LinkController
 
         if (array_key_exists('original_url', $body)) {
             $originalUrl = trim($body['original_url']);
-            if ($originalUrl === '' || !filter_var($originalUrl, FILTER_VALIDATE_URL) || !preg_match('#^https?://#i', $originalUrl)) {
+            if ($originalUrl === '' || !UrlValidator::validateUrl($originalUrl)) {
                 self::respond(422, ['error' => 'original_url must be a valid http or https URL']);
                 return;
             }
-            $updateData['original_url'] = $originalUrl;
+            $updateData['original_url'] = UrlValidator::normalizeUrl($originalUrl);
         }
 
         if (array_key_exists('custom_alias', $body)) {
             $customAlias = trim($body['custom_alias'] ?? '');
-            if ($customAlias !== '' && !preg_match('/^[a-zA-Z0-9_-]{4,64}$/', $customAlias)) {
-                self::respond(422, ['error' => 'custom_alias must be 4-64 alphanumeric characters, underscores or hyphens']);
+            if ($customAlias !== '' && !UrlValidator::validateCustomAlias($customAlias)) {
+                self::respond(422, ['error' => 'custom_alias must be 4-64 alphanumeric characters, underscores or hyphens, and not a reserved code']);
                 return;
             }
             if ($customAlias !== '' && $customAlias !== $code && Link::existsCode($customAlias)) {

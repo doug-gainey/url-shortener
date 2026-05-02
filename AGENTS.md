@@ -86,9 +86,10 @@ Browser → redirect.php (/:code) → Redis lookup → 302 redirect
 
 ```
 url:{code}          → original URL string (TTL: 86400s)
+ratelimit:{hash}    → request count (TTL: 60s)
 ```
 
-Current implementation uses Redis only for caching URL resolutions. Click counters are stored directly in SQLite via `Link::incrementClicks()`.
+Current implementation uses Redis only for caching URL resolutions and rate limiting. Click counters are stored directly in SQLite via `Link::incrementClicks()`.
 
 Never deviate from this schema without updating `RedisService.php` and this file.
 
@@ -137,6 +138,19 @@ Example failure response:
   `javascript:`, `data:`, `ftp:`, `mailto:`
 - Normalize before storing: lowercase scheme and host, strip default ports
 
+### Rate Limiting
+
+- 10 requests per minute per client IP (hashed for privacy)
+- Applied to POST /api/links endpoint
+- Uses Redis for distributed rate limiting
+
+### Logging
+
+- All API requests logged to `logs/app.log`
+- Client IPs hashed for privacy
+- Log levels: INFO, WARNING, ERROR
+- Structured JSON context in logs
+
 ---
 
 ## File Structure
@@ -149,7 +163,7 @@ api/
   config/config.php      # DB, Redis, app config
   controllers/           # One class per file, suffix: Controller
   models/                # Link.php
-  services/              # RedisService.php, ShortCodeGenerator.php
+  services/              # RedisService.php, ShortCodeGenerator.php, UrlValidator.php, RateLimiter.php, Logger.php
 
 frontend/
   package.json
@@ -166,6 +180,8 @@ frontend/
 
 redirect.php             # Hot path — resolve short codes and redirect
 router.php               # Local PHP router for development
+logs/                    # Application logs (created automatically)
+data/                    # SQLite database files
 docker-compose.yml
 Dockerfile
 ```
@@ -182,7 +198,7 @@ Dockerfile
 - **Do not** modify `redirect.php` for non-redirect concerns — it must stay lean
 - **Do not** add `console.log` or `var_dump` / `print_r` debug calls in committed code
 - **Do not** store raw IP addresses — hash them with `hash('sha256', $ip . $salt)`
-  before persisting to SQLite
+  before persisting to SQLite or logging
 
 ---
 
@@ -195,3 +211,5 @@ Dockerfile
 - Expired links (past `expires_at`) must return a friendly HTML page, not a raw 404
 - The frontend currently uses a hardcoded PHP API base URL and does not rely on a Vite proxy.
 - There is no Nginx config in this repo; development traffic is served by PHP's built-in server.
+- Rate limiting uses hashed IPs; ensure consistent hashing across requests
+- Database indexes are critical for performance; always recreate after schema changes

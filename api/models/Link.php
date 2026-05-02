@@ -25,6 +25,10 @@ CREATE TABLE IF NOT EXISTS links (
     clicks INTEGER NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_short_code ON links(short_code);
+CREATE INDEX IF NOT EXISTS idx_expires_at ON links(expires_at);
+CREATE INDEX IF NOT EXISTS idx_created_at ON links(created_at);
 SQL;
         self::db()->exec($sql);
     }
