@@ -2,14 +2,14 @@
   <div>
     <div
       v-if="loading"
-      class="rounded-3xl border border-slate-200 bg-slate-50 p-8 text-center text-slate-500"
+      class="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center text-slate-500"
     >
       Loading links...
     </div>
 
     <div
       v-else-if="links.length === 0"
-      class="rounded-3xl border border-slate-200 bg-slate-50 p-8 text-center text-slate-500"
+      class="rounded-lg border border-slate-200 bg-slate-50 p-8 text-center text-slate-500"
     >
       No links yet. Create one to get started.
     </div>
@@ -37,7 +37,7 @@
         <tr
           v-for="link in links"
           :key="link.short_code"
-          class="rounded-3xl bg-white shadow-sm"
+          class="rounded-lg bg-white shadow-sm"
         >
           <td
             class="whitespace-nowrap px-4 py-4 text-sm font-medium text-slate-900"
@@ -56,7 +56,7 @@
           <td class="px-4 py-4 text-sm text-slate-600">
             <span
               :class="[
-                'inline-flex rounded-full px-3 py-1 text-xs font-semibold',
+                'inline-flex rounded-lg px-3 py-1 text-xs font-semibold',
                 link.is_active
                   ? 'bg-emerald-100 text-emerald-700'
                   : 'bg-rose-100 text-rose-700',
@@ -71,21 +71,32 @@
           <td class="px-4 py-4 text-sm text-slate-600">
             <div class="flex gap-2">
               <button
-                @click="openStats(link)"
-                class="rounded-full bg-green-500 px-3 py-2 text-white transition hover:bg-green-600"
+                @click="copyLink(link)"
+                :class="[
+                  'rounded-lg px-3 py-2 text-white transition',
+                  justCopied === link.short_code
+                    ? 'bg-emerald-500 hover:bg-emerald-600'
+                    : 'bg-slate-500 hover:bg-slate-600',
+                ]"
               >
-                Stats
+                {{ justCopied === link.short_code ? "Copied!" : "Copy" }}
               </button>
               <button
                 @click="openQR(link)"
-                class="rounded-full bg-blue-500 px-3 py-2 text-white transition hover:bg-blue-600"
+                class="rounded-lg bg-blue-500 px-3 py-2 text-white transition hover:bg-blue-600"
               >
                 QR
               </button>
               <button
+                @click="openStats(link)"
+                class="rounded-lg bg-green-500 px-3 py-2 text-white transition hover:bg-green-600"
+              >
+                Stats
+              </button>
+              <button
                 @click="toggleActive(link)"
                 :class="[
-                  'rounded-full px-3 py-2 text-white transition',
+                  'rounded-lg px-3 py-2 text-white transition',
                   link.is_active
                     ? 'bg-rose-600 hover:bg-rose-700'
                     : 'bg-emerald-600 hover:bg-emerald-700',
@@ -96,7 +107,7 @@
               <button
                 v-if="!link.is_active"
                 @click="permanentlyDelete(link)"
-                class="rounded-full bg-red-700 px-3 py-2 text-white transition hover:bg-red-800"
+                class="rounded-lg bg-red-700 px-3 py-2 text-white transition hover:bg-red-800"
               >
                 Delete
               </button>
@@ -126,6 +137,7 @@ import QRCodeModal from "./QRCodeModal.vue";
 import StatsModal from "./StatsModal.vue";
 import { api } from "../api/client";
 import { useLinksStore } from "../stores/links";
+import { copyToClipboard } from "../utils/clipboard";
 
 interface LinkItem {
   short_code: string;
@@ -156,6 +168,8 @@ const emit = defineEmits<{
 
 const store = useLinksStore();
 
+// Initialize state refs
+const justCopied = ref<string | null>(null);
 const showQRModal = ref(false);
 const selectedQRUrl = ref("");
 const showStatsModal = ref(false);
@@ -181,6 +195,15 @@ const openStats = async (link: LinkItem) => {
   } catch (error) {
     console.error("Failed to fetch stats:", error);
   }
+};
+
+const copyLink = async (link: LinkItem) => {
+  const fullUrl = shortUrl(link.short_code);
+  await copyToClipboard(fullUrl);
+  justCopied.value = link.short_code;
+  setTimeout(() => {
+    justCopied.value = null;
+  }, 2000);
 };
 
 const toggleActive = async (link: LinkItem) => {

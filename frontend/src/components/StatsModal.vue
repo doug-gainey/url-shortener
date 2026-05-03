@@ -4,7 +4,7 @@
     class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
     @click="closeModal"
   >
-    <div class="w-full max-w-lg rounded-3xl bg-white p-8 shadow-lg" @click.stop>
+    <div class="w-full max-w-lg rounded-lg bg-white p-8 shadow-lg" @click.stop>
       <div class="mb-6">
         <h2 class="text-2xl font-bold text-slate-900">Link Statistics</h2>
         <p class="mt-2 text-sm text-slate-500">{{ stats?.short_code }}</p>
@@ -64,7 +64,7 @@
 
       <button
         @click="closeModal"
-        class="w-full rounded-full bg-slate-900 px-4 py-2 text-white transition hover:bg-slate-800"
+        class="w-full rounded-lg bg-slate-900 px-4 py-2 text-white transition hover:bg-slate-800"
       >
         Close
       </button>

@@ -3,7 +3,7 @@
     v-if="isOpen"
     class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
   >
-    <div class="rounded-3xl bg-white p-8 shadow-lg">
+    <div class="rounded-lg bg-white p-8 shadow-lg">
       <div class="mb-6 flex items-center justify-between">
         <h3 class="text-lg font-semibold">QR Code</h3>
         <button
@@ -22,7 +22,7 @@
 
       <button
         @click="downloadQR"
-        class="w-full rounded-full bg-sky-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-sky-700"
+        class="w-full rounded-lg bg-sky-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-sky-700"
       >
         Download QR Code
       </button>
