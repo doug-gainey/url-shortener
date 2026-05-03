@@ -125,6 +125,7 @@ import { ref } from "vue";
 import QRCodeModal from "./QRCodeModal.vue";
 import StatsModal from "./StatsModal.vue";
 import { api } from "../api/client";
+import { useLinksStore } from "../stores/links";
 
 interface LinkItem {
   short_code: string;
@@ -152,6 +153,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: "delete", code: string): void;
 }>();
+
+const store = useLinksStore();
 
 const showQRModal = ref(false);
 const selectedQRUrl = ref("");
@@ -181,16 +184,7 @@ const openStats = async (link: LinkItem) => {
 };
 
 const toggleActive = async (link: LinkItem) => {
-  try {
-    const response = await api.put(`/links/${link.short_code}`, {
-      is_active: !link.is_active,
-    });
-    if (response && response.data.data) {
-      link.is_active = Boolean(response.data.data.is_active);
-    }
-  } catch (error) {
-    console.error("Failed to toggle active state:", error);
-  }
+  await store.toggleActive(link.short_code);
 };
 
 const permanentlyDelete = async (link: LinkItem) => {
@@ -200,12 +194,7 @@ const permanentlyDelete = async (link: LinkItem) => {
     return;
   }
 
-  try {
-    await api.delete(`/links/${link.short_code}?permanent=1`);
-    emit("delete", link.short_code);
-  } catch (error) {
-    console.error("Failed to permanently delete link:", error);
-  }
+  await store.permanentlyDelete(link.short_code);
 };
 
 const formatDate = (value: string) =>

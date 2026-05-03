@@ -64,19 +64,79 @@
         </div>
         <button
           class="rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-          @click="store.fetchLinks"
+          @click="applyFilters"
         >
           Refresh
         </button>
       </div>
 
-      <div class="mt-6">
+      <div class="mt-6 space-y-4">
+        <div class="flex flex-col gap-3 md:flex-row md:items-center">
+          <div class="flex items-center gap-2">
+            <label class="text-sm font-medium text-slate-600">Status:</label>
+            <select
+              v-model="filterStatus"
+              @change="applyFilters"
+              class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-sky-500 focus:outline-none"
+            >
+              <option value="">All</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-2">
+            <label class="text-sm font-medium text-slate-600">Sort by:</label>
+            <select
+              v-model="sortBy"
+              @change="applyFilters"
+              class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-sky-500 focus:outline-none"
+            >
+              <option value="created_at">Created (Newest)</option>
+              <option value="created_at_asc">Created (Oldest)</option>
+              <option value="clicks">Clicks (Most)</option>
+              <option value="expires_at">Expires</option>
+            </select>
+          </div>
+        </div>
+
         <LinkTable
           :links="store.list"
           :loading="store.loading"
           :app-base-url="store.appBaseUrl"
           @delete="store.deleteLink"
         />
+
+        <div
+          v-if="store.pagination"
+          class="flex items-center justify-between border-t border-slate-200 pt-4"
+        >
+          <div class="text-sm text-slate-600">
+            Showing {{ store.pagination.offset + 1 }} to
+            {{
+              Math.min(
+                store.pagination.offset + store.pagination.limit,
+                store.pagination.total,
+              )
+            }}
+            of {{ store.pagination.total }} links
+          </div>
+          <div class="flex gap-2">
+            <button
+              @click="previousPage"
+              :disabled="store.pagination.offset === 0"
+              class="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition disabled:opacity-50 hover:bg-slate-50 enabled:hover:bg-slate-100"
+            >
+              Previous
+            </button>
+            <button
+              @click="nextPage"
+              :disabled="!store.pagination.has_more"
+              class="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition disabled:opacity-50 hover:bg-slate-50 enabled:hover:bg-slate-100"
+            >
+              Next
+            </button>
+          </div>
+        </div>
       </div>
     </section>
   </div>
@@ -94,6 +154,51 @@ const form = ref({
   expires_at: "",
 });
 
+const filterStatus = ref("");
+const sortBy = ref("created_at");
+
+const applyFilters = async () => {
+  const sort = sortBy.value === "created_at_asc" ? "created_at" : sortBy.value;
+  const order = sortBy.value === "created_at_asc" ? "ASC" : "DESC";
+  await store.fetchLinks({
+    status: filterStatus.value || undefined,
+    sortBy: sort,
+    sortOrder: order,
+  });
+};
+
+const nextPage = async () => {
+  if (store.pagination && store.pagination.has_more) {
+    const sort =
+      sortBy.value === "created_at_asc" ? "created_at" : sortBy.value;
+    const order = sortBy.value === "created_at_asc" ? "ASC" : "DESC";
+    await store.fetchLinks({
+      offset: store.pagination.offset + store.pagination.limit,
+      status: filterStatus.value || undefined,
+      sortBy: sort,
+      sortOrder: order,
+    });
+  }
+};
+
+const previousPage = async () => {
+  if (store.pagination && store.pagination.offset > 0) {
+    const newOffset = Math.max(
+      0,
+      store.pagination.offset - store.pagination.limit,
+    );
+    const sort =
+      sortBy.value === "created_at_asc" ? "created_at" : sortBy.value;
+    const order = sortBy.value === "created_at_asc" ? "ASC" : "DESC";
+    await store.fetchLinks({
+      offset: newOffset,
+      status: filterStatus.value || undefined,
+      sortBy: sort,
+      sortOrder: order,
+    });
+  }
+};
+
 const submit = async () => {
   await store.createLink({
     original_url: form.value.original_url,
@@ -105,6 +210,9 @@ const submit = async () => {
     form.value.original_url = "";
     form.value.custom_alias = "";
     form.value.expires_at = "";
+    filterStatus.value = "";
+    sortBy.value = "created_at";
+    await store.fetchLinks();
   }
 };
 

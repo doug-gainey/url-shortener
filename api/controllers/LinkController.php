@@ -50,7 +50,38 @@ class LinkController
 
     private static function list(): void
     {
-        self::respond(200, ['data' => Link::findAll()]);
+        $limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 20;
+        $offset = isset($_GET['offset']) ? (int) $_GET['offset'] : 0;
+        $sortBy = isset($_GET['sort']) ? trim($_GET['sort']) : 'created_at';
+        $sortOrder = isset($_GET['order']) && strtoupper($_GET['order']) === 'ASC' ? 'ASC' : 'DESC';
+        $status = isset($_GET['status']) ? trim($_GET['status']) : null;
+
+        // Validate limit and offset
+        if ($limit < 1 || $limit > 100) {
+            $limit = 20;
+        }
+        if ($offset < 0) {
+            $offset = 0;
+        }
+
+        // Validate sort column
+        $validSortColumns = ['created_at', 'clicks', 'expires_at'];
+        if (!in_array($sortBy, $validSortColumns)) {
+            $sortBy = 'created_at';
+        }
+
+        // Get filtered and paginated results
+        $result = Link::findPaginated($limit, $offset, $sortBy, $sortOrder, $status);
+
+        self::respond(200, [
+            'data' => $result['links'],
+            'pagination' => [
+                'limit' => $limit,
+                'offset' => $offset,
+                'total' => $result['total'],
+                'has_more' => $result['has_more'],
+            ],
+        ]);
     }
 
     private static function retrieve(string $code): void

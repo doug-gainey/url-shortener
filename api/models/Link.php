@@ -70,6 +70,50 @@ SQL;
         return $stmt->fetchAll();
     }
 
+    public static function findPaginated(int $limit, int $offset, string $sortBy = 'created_at', string $sortOrder = 'DESC', ?string $status = null): array
+    {
+        $params = [];
+
+        // Validate sort inputs to avoid SQL injection through ORDER BY
+        $allowedSortColumns = ['created_at', 'clicks', 'expires_at'];
+        if (!in_array($sortBy, $allowedSortColumns, true)) {
+            $sortBy = 'created_at';
+        }
+
+        $sortOrder = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
+
+        // Build WHERE clause
+        $whereClause = '';
+        if ($status === 'active') {
+            $whereClause = 'WHERE is_active = :is_active';
+            $params[':is_active'] = 1;
+        } elseif ($status === 'inactive') {
+            $whereClause = 'WHERE is_active = :is_active';
+            $params[':is_active'] = 0;
+        }
+
+        // Get total count
+        $countSql = 'SELECT COUNT(*) as total FROM links ' . $whereClause;
+        $countStmt = self::db()->prepare($countSql);
+        $countStmt->execute($params);
+        $totalResult = $countStmt->fetch(PDO::FETCH_ASSOC);
+        $total = (int) $totalResult['total'];
+
+        // Get paginated results
+        $sql = 'SELECT * FROM links ' . $whereClause . ' ORDER BY ' . $sortBy . ' ' . $sortOrder . ' LIMIT :limit OFFSET :offset';
+        $stmt = self::db()->prepare($sql);
+        $params[':limit'] = $limit;
+        $params[':offset'] = $offset;
+        $stmt->execute($params);
+        $links = $stmt->fetchAll();
+
+        return [
+            'links' => $links,
+            'total' => $total,
+            'has_more' => ($offset + $limit) < $total,
+        ];
+    }
+
     public static function create(array $data): array
     {
         $stmt = self::db()->prepare('INSERT INTO links (short_code, original_url, custom_alias, expires_at) VALUES (:short_code, :original_url, :custom_alias, :expires_at)');
