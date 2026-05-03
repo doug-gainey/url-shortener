@@ -36,6 +36,6 @@ class Logger
 
     public static function hashIp(string $ip): string
     {
-        return hash('sha256', $ip . 'salt'); // Use a proper salt in production
+        return hash('sha256', $ip . 'salt'); // TODO: Use a proper salt in production
     }
 }

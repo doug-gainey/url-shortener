@@ -29,6 +29,6 @@ class RateLimiter
     {
         // Use hashed IP for privacy
         $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-        return hash('sha256', $ip . 'salt'); // Use a proper salt in production
+        return hash('sha256', $ip . 'salt'); // TODO: Use a proper salt in production
     }
 }
