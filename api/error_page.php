@@ -1,6 +1,11 @@
 <?php
 
 function outputErrorPage(string $title, string $message, int $statusCode = 404): void {
+    header('Content-Type: text/html; charset=UTF-8');
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+
     $html = <<<HTML
 <!DOCTYPE html>
 <html lang="en">
