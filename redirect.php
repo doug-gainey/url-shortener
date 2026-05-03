@@ -1,29 +1,26 @@
 <?php
 require __DIR__ . '/api/bootstrap.php';
+require __DIR__ . '/api/error_page.php';
 
 $code = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
 if ($code === '') {
-    http_response_code(404);
-    echo 'Short code required.';
+    outputErrorPage('Short code required.', 'Please provide a valid short code in the URL.', 400);
     exit;
 }
 
 $link = Link::findByCode($code);
 if (!$link) {
-    http_response_code(404);
-    echo 'Link not found.';
+    outputErrorPage('Link not found.', 'The requested short link does not exist or may have been removed.', 404);
     exit;
 }
 
 if (isset($link['is_active']) && $link['is_active'] == 0) {
-    http_response_code(410);
-    echo 'Link deactivated.';
+    outputErrorPage('Link deactivated.', 'This link has been deactivated by the owner.', 410);
     exit;
 }
 
 if ($link['expires_at'] !== null && strtotime($link['expires_at']) < time()) {
-    http_response_code(410);
-    echo 'Link expired.';
+    outputErrorPage('Link expired.', 'This link has expired and is no longer available.', 410);
     exit;
 }
 
