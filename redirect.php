@@ -26,6 +26,13 @@ if ($link['expires_at'] !== null && strtotime($link['expires_at']) < time()) {
 
 Link::incrementClicks($code);
 
+// Record analytics
+$userAgent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+$referrer = $_SERVER['HTTP_REFERER'] ?? null;
+$clientIp = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+$ipHash = hash('sha256', $clientIp . 'analytics_salt'); // TODO: Use a proper salt in production
+Analytics::recordClick($code, $userAgent, $referrer, $ipHash);
+
 $cacheKey = 'url:' . $code;
 $originalUrl = RedisService::get($cacheKey);
 if (!$originalUrl) {

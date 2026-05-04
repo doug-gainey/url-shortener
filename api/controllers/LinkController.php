@@ -23,6 +23,11 @@ class LinkController
                     return;
                 }
 
+                if ($action === 'analytics') {
+                    AnalyticsController::handle($method, $segments);
+                    return;
+                }
+
                 self::retrieve($code);
                 return;
             case 'POST':

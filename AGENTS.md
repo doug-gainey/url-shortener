@@ -11,14 +11,14 @@ for local dev; `redirect.php` is the hot path — treat it carefully.
 ### Backend (PHP)
 
 ```bash
-# Build the app image and start services
+# Build the app image and start services (or rebuild after Dockerfile changes)
 docker compose up --build -d
 
-# Initialize the SQLite database schema
+# Initialize the SQLite database schema (or update after schema changes)
 docker compose exec app php api/init_db.php
 
-# View backend logs
-docker compose logs -f app
+# View logs
+docker compose logs -f
 
 # Stop services
 docker compose down
@@ -40,22 +40,6 @@ npm run build
 
 # Preview the production build
 npm run preview
-```
-
-### Docker
-
-```bash
-# Start the PHP app and Redis
-docker compose up --build -d
-
-# View logs
-docker compose logs -f
-
-# Stop services
-docker compose down
-
-# Rebuild after Dockerfile changes
-docker compose up --build -d
 ```
 
 ---
@@ -132,6 +116,23 @@ Example failure response:
 - Current code increments click counts directly in SQLite via `Link::incrementClicks()`.
 - Redis is only used for URL caching in `redirect.php`.
 
+### Analytics Tracking
+
+- **Analytics Schema** — Separate `analytics` table tracks:
+  - `short_code` — Link identifier
+  - `user_agent` — Browser/client user agent string
+  - `referrer` — HTTP Referer header
+  - `ip_hash` — SHA256 hash of client IP (privacy-preserving, no raw IPs stored)
+  - `created_at` — Timestamp of the click
+- **Recording Flow** — Each redirect in `redirect.php`:
+  1. Increments click counter via `Link::incrementClicks()`
+  2. Records analytics via `Analytics::recordClick(code, userAgent, referrer, ipHash)`
+- **API Endpoints**:
+  - `GET /api/links/{code}/analytics` — Paginated click analytics (limit, offset params)
+  - `GET /api/links/{code}/analytics/summary` — Summary stats (total_clicks, unique_ips, unique_agents)
+- **Indexes** — Created on: `short_code`, `created_at`, `ip_hash` for efficient queries
+- **Never** log raw IP addresses; always hash them with `hash('sha256', $ip . $salt)`
+
 ### Link Lifecycle & Deletion
 
 - **Soft Delete (Deactivate)**: `DELETE /api/links/{code}` sets `is_active = 0` without removing the link from the database
@@ -162,6 +163,21 @@ Example failure response:
 - Log levels: INFO, WARNING, ERROR
 - Structured JSON context in logs
 
+### Database Schema Management
+
+- **Schema initialization** happens in `api/init_db.php` only — run with:
+  ```bash
+  docker compose exec app php api/init_db.php
+  ```
+- **Never** add schema creation code to `bootstrap.php`; it loads on every request
+- **For new schema changes**:
+  1. Add migration logic to the appropriate model's `ensureSchema()` method (e.g., `Link::ensureSchema()`, `Analytics::ensureSchema()`)
+  2. Use idempotent checks: `CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`
+  3. For new columns: check if column exists before adding with SQLite `PRAGMA table_info()`
+  4. Run `docker compose exec app php api/init_db.php` to apply changes
+- **Data safety**: `init_db.php` does not drop or truncate tables — all schema changes are additive and preserve existing data
+- **bootstrap.php role**: Runtime wiring and service initialization only (no schema creation)
+
 ---
 
 ## File Structure
@@ -173,8 +189,14 @@ api/
   init_db.php            # SQLite schema creation script
   config/config.php      # DB, Redis, app config
   controllers/           # One class per file, suffix: Controller
-  models/                # Link.php
+    LinkController.php
+    AnalyticsController.php
+    ConfigController.php
+  models/                # One class per file
+    Link.php
+    Analytics.php
   services/              # RedisService.php, ShortCodeGenerator.php, UrlValidator.php, RateLimiter.php, Logger.php
+  error_page.php         # Styled error page function
 
 frontend/
   package.json
