@@ -5,7 +5,7 @@ class UrlValidator
         'api', 'admin', 'static', 'login', 'dashboard', 'health', 'favicon.ico'
     ];
 
-    public static function validateUrl(string $url): bool
+    public static function validate(string $url): bool
     {
         if (!filter_var($url, FILTER_VALIDATE_URL)) {
             return false;
@@ -38,7 +38,7 @@ class UrlValidator
         return true;
     }
 
-    public static function normalizeUrl(string $url): string
+    public static function normalize(string $url): string
     {
         $parsed = parse_url($url);
 

@@ -120,13 +120,13 @@ class LinkController
             return;
         }
 
-        if (!UrlValidator::validateUrl($originalUrl)) {
+        if (!UrlValidator::validate($originalUrl)) {
             Logger::warning('Invalid original_url in create request', ['client_id' => $clientId, 'url' => $originalUrl]);
             self::respond(422, ['error' => 'original_url must be a valid http or https URL']);
             return;
         }
 
-        $normalizedUrl = UrlValidator::normalizeUrl($originalUrl);
+        $normalizedUrl = UrlValidator::normalize($originalUrl);
 
         if ($customAlias !== '' && !UrlValidator::validateCustomAlias($customAlias)) {
             Logger::warning('Invalid custom_alias in create request', ['client_id' => $clientId, 'alias' => $customAlias]);
@@ -159,11 +159,11 @@ class LinkController
 
         if (array_key_exists('original_url', $body)) {
             $originalUrl = trim($body['original_url']);
-            if ($originalUrl === '' || !UrlValidator::validateUrl($originalUrl)) {
+            if ($originalUrl === '' || !UrlValidator::validate($originalUrl)) {
                 self::respond(422, ['error' => 'original_url must be a valid http or https URL']);
                 return;
             }
-            $updateData['original_url'] = UrlValidator::normalizeUrl($originalUrl);
+            $updateData['original_url'] = UrlValidator::normalize($originalUrl);
         }
 
         if (array_key_exists('custom_alias', $body)) {

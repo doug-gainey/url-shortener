@@ -17,6 +17,12 @@ docker compose up --build -d
 # Initialize the SQLite database schema (or update after schema changes)
 docker compose exec app php api/init_db.php
 
+# Run backend tests (PHPUnit)
+docker compose exec app ./vendor/bin/phpunit
+
+# Run tests with coverage report
+docker compose exec app ./vendor/bin/phpunit --coverage-html=coverage
+
 # View logs
 docker compose logs -f
 
@@ -46,7 +52,7 @@ npm run preview
 
 ## Verification
 
-The current codebase does not include automated PHP or frontend test suites yet.
+The current codebase includes automated PHPUnit test suites for the backend.
 
 Before marking a task complete:
 
@@ -54,6 +60,7 @@ Before marking a task complete:
 2. Confirm the frontend loads at `http://localhost:5173` or the Vite-assigned port.
 3. If a task touches `redirect.php`, manually verify a redirect round-trip:
    `curl -I http://localhost/{code}` and confirm a `302` response.
+4. Run backend tests: `docker compose exec app ./vendor/bin/phpunit`
 
 ---
 
@@ -163,6 +170,27 @@ Example failure response:
 - Log levels: INFO, WARNING, ERROR
 - Structured JSON context in logs
 
+### Testing
+
+- **PHPUnit** for backend tests (PHP models, services, controllers)
+- **Test Location**: `tests/Unit/` directory
+- **Running Tests**:
+  ```bash
+  docker compose exec app ./vendor/bin/phpunit
+  ```
+- **Coverage Report**:
+  ```bash
+  docker compose exec app ./vendor/bin/phpunit --coverage-html=coverage
+  ```
+- **Test Structure**:
+  - One test class per model/service (e.g., `LinkTest.php`, `AnalyticsTest.php`)
+  - Use in-memory SQLite database for isolated test environment
+  - Test bootstrap in `tests/Bootstrap.php` sets up DB and loads models
+  - Mock controllers where needed using Mockery
+- **Coverage Target**: Aim for 80%+ coverage on models and services
+- **Test Database**: Tests use `sqlite::memory:` for speed and isolation
+- **Fixtures**: Test data helpers in `tests/Fixtures/` directory
+
 ### Database Schema Management
 
 - **Schema initialization** happens in `api/init_db.php` only — run with:
@@ -198,6 +226,15 @@ api/
   services/              # RedisService.php, ShortCodeGenerator.php, UrlValidator.php, RateLimiter.php, Logger.php
   error_page.php         # Styled error page function
 
+tests/
+  Bootstrap.php          # Test environment setup (in-memory SQLite)
+  Unit/                  # Unit test files (one per model/service)
+    LinkTest.php
+    AnalyticsTest.php
+    ShortCodeGeneratorTest.php
+    UrlValidatorTest.php
+  Fixtures/              # Test data and helpers
+
 frontend/
   package.json
   tsconfig.json
@@ -215,6 +252,8 @@ redirect.php             # Hot path — resolve short codes and redirect
 router.php               # Local PHP router for development
 logs/                    # Application logs (created automatically)
 data/                    # SQLite database files
+composer.json            # PHP dependencies
+phpunit.xml              # PHPUnit configuration
 docker-compose.yml
 Dockerfile
 ```
